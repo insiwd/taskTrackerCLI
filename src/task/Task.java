@@ -68,9 +68,4 @@ public class Task {
     public void setUpdatedAt(LocalDate updatedAt) {
         this.updatedAt = updatedAt;
     }
-
-    
-
-    
-
 }
