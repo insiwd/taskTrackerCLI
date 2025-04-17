@@ -14,23 +14,21 @@ public class Comandos {
     public void add(String descricao) throws IOException {
         File arquivo = new File("tasks.json");
 
-        // verifica se existe o tasks.json
-        if (arquivo.isFile() && arquivo.exists()) {
-            System.out.println(arquivo + " Existe!");
-            Task task = new Task(descricao);
-            String taskJson = String.format(
-                    "{\"id\": %d, \"descricao\": %s}",
-                    task.getId(),
-                    task.getDescription());
+        Task task = new Task(descricao);
+        String taskJson = String.format(
+                "{\"id\": %d, \"descricao\": \"%s\"}",
+                task.getId(),
+                task.getDescription());
 
-        } else {
+        if (!arquivo.exists()) {
             // se não existe, cria
-            System.out.println(arquivo + " Não existe :( \nCriando..!");
             arquivo.createNewFile();
             try (FileWriter fileWriter = new FileWriter(arquivo)) {
                 fileWriter.write("[]");
                 fileWriter.flush();
             }
+        } else {
+            System.out.println("arquivo existe.");
         }
 
         // precisa de um try-with-resources para não ter warning
@@ -47,9 +45,22 @@ public class Comandos {
             // se está vazio, printa que está vazio!!
             String jsonBruto = conteudo.toString().replaceAll("\\s+", "");
             if (jsonBruto.equals("[]")) {
-                System.out.println("Vazio!");
+                // cria uma nova string
+                FileWriter fileWriter = new FileWriter(arquivo, false);
+                fileWriter.write("[" + taskJson + "]");
+                fileWriter.close();
             } else {
-                System.out.println("Tem conteúdo!");
+                // quando já tem conteudo
+                List<String> objetoStrings = separaObjetos(jsonBruto); // quebra os objetos existentes
+                objetoStrings.add(taskJson);
+
+                String novoJson = "[" + String.join(",", objetoStrings) + "]";
+
+                // escreve no arquivo.
+                // não precisa do close, porque o try já fecha
+                try (FileWriter fileWriter = new FileWriter(arquivo, false)) {
+                    fileWriter.write(novoJson);
+                }
             }
         } catch (FileNotFoundException e) {
             System.out.println("Ocorreu um erro: " + e);
@@ -60,9 +71,6 @@ public class Comandos {
 
         // precisamos remover os colchetes iniciais e finais
         if (conteudoJson.startsWith("[") && conteudoJson.endsWith("]")) {
-            int colchetesIndex1 = conteudoJson.indexOf("[");
-            int colchetesIndex2 = conteudoJson.lastIndexOf("]");
-
             // pula o primeiro caractere
             String novoConteudoJson = conteudoJson.substring(1, conteudoJson.length() - 1);
 
@@ -94,5 +102,28 @@ public class Comandos {
             return objetos;
         }
         return new ArrayList<>();
+    }
+
+    public String removerEspacosForaDasStrings(String json) {
+        // stringbuilder para ir incrementando
+        StringBuilder resultado = new StringBuilder();
+        boolean dentroDeString = false;
+        for (int i = 0; i < json.length(); i++) {
+            char c = json.charAt(i);
+            switch (c) {
+                case '"' -> {
+                    // alterna o valor atual
+                    dentroDeString = !dentroDeString;
+                    resultado.append(c);
+                }
+                case ' ' -> {
+                    if (dentroDeString == true) {
+                        resultado.append(' ');
+                    }
+                }
+                default -> resultado.append(c);
+            }
+        }
+        return resultado.toString();
     }
 }
